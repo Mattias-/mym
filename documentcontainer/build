@@ -1,0 +1,12 @@
+#!/bin/bash
+
+ARCHIVEDIR="/tmp/archivedir"
+TARGETDIR="/tmp/targetdir"
+
+unzip -d $TARGETDIR $(find $ARCHIVEDIR -mindepth 1 -maxdepth 1)
+# Find the most shallow Makefile, order by inc. depth, take the first
+MAKEFILE=$(find $TARGETDIR -name Makefile -printf '%d\t%p\n' | sort -nk1 | head -1 | cut -f2-)
+MAKEDIR=$(dirname $MAKEFILE)
+
+make --directory=$MAKEDIR --makefile=$MAKEFILE $1
+cp $MAKEDIR/$1 /tmp
