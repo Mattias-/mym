@@ -3,7 +3,8 @@ MAINTAINER Mattias Appelgren, mattias@ppelgren.se
 
 WORKDIR /tmp
 
-ADD build /tmp/
+# Hack to speed up download of packages
+ADD /etc/apt/sources.list sources.list /etc/apt/sources.list
 
 RUN apt-get update \
     && apt-get --yes --quiet upgrade \
@@ -17,4 +18,8 @@ RUN apt-get update \
     python-pygments \
     zip
 
-#RUN apt-get update && apt-get --yes --quiet install zip
+RUN useradd runner
+
+USER runner
+
+ADD build /tmp/
