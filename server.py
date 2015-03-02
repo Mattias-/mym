@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from contextlib import contextmanager
+from functools import wraps
 from os.path import join
 from shutil import rmtree
 from StringIO import StringIO
@@ -62,9 +63,31 @@ def docker_build(archivedir, filename):
 def build_get():
     return app.send_static_file('index.html')
 
+def check_auth(username, password):
+    """This function is called to check if a username /
+    password combination is valid.
+    """
+    return username == 'admin' and password == 'secret'
+
+def authenticate():
+    """Sends a 401 response that enables basic auth"""
+    return Response(
+    'Could not verify your access level for that URL.\n'
+    'You have to login with proper credentials', 401,
+    {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
 
 @app.route('/build/', methods=['POST'])
 @app.route('/build/<filename>', methods=['POST'])
+@requires_auth
 def build(filename=None):
     filename = request.form.get('filename', filename)
     archive = request.files['archive']
@@ -77,7 +100,8 @@ def build(filename=None):
         try:
             response = Response(docker_build(tempdir, filename))
             response.mimetype = 'application/octet-stream'
-            response.headers['Content-Disposition'] = 'attachment; filename="%s"' % filename
+            cd = 'attachment; filename="%s"' % filename
+            response.headers['Content-Disposition'] = cd
             return response
         except docker.errors.APIError as e:
             if 'could not find the file' in e.explanation.lower():
@@ -94,7 +118,7 @@ def build(filename=None):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', threaded=True, debug=False)
+    app.run(host='0.0.0.0', threaded=True, debug=True)
     #import sys
     #with mktmpdir() as tempdir:
     #    shutil.copy(sys.argv[1], tempdir)
