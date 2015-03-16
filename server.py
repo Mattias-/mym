@@ -76,11 +76,11 @@ def docker_build(archivedir, target, image):
         image=image,
         volumes=['/tmp/archivedir'],
         network_disabled=True,
-        command='./build %s' % target
+        command='/tmp/build %s' % target
     )
     try:
-        c.start(container, binds={archivedir: {'bind': 'tmp/archivedir',
-                                               'ro': True}})
+        binds = {archivedir: {'bind': '/tmp/archivedir', 'ro': True}}
+        c.start(container, binds=binds)
         result = c.wait(container, timeout=CONTAINER_TIMEOUT)
         log = c.logs(container, stdout=True, stderr=True)
         print log
