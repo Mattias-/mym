@@ -67,19 +67,19 @@ def requires_auth(f):
         auth = request.authorization
         if not auth or not check_auth(auth.username, auth.password):
             header = {'WWW-Authenticate': 'Basic realm="Login Required"'}
-            return Response('Please log in', 401, header)
+            return Response('Bad username or password', 401, header)
         return f(*args, **kwargs)
     return decorated
 
 def docker_build(inputdir_local, output, image):
     container = c.create_container(
         image=image,
-        volumes=['/tmp/archivedir'],
+        volumes=['/tmp/inputdir'],
         network_disabled=True,
         command='/tmp/build %s' % output
     )
     try:
-        binds = {inputdir_local: {'bind': '/tmp/archivedir', 'ro': True}}
+        binds = {inputdir_local: {'bind': '/tmp/inputdir', 'ro': True}}
         c.start(container, binds=binds)
         result = c.wait(container, timeout=CONTAINER_TIMEOUT)
         log = c.logs(container, stdout=True, stderr=True)

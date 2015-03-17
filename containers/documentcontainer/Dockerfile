@@ -3,9 +3,6 @@ MAINTAINER Mattias Appelgren, mattias@ppelgren.se
 
 WORKDIR /tmp
 
-# Hack to speed up download of packages
-ADD /etc/apt/sources.list sources.list /etc/apt/sources.list
-
 RUN apt-get update \
     && apt-get --yes --quiet upgrade \
     && apt-get --yes --quiet install build-essential \

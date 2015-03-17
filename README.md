@@ -55,7 +55,7 @@ curl --output output.pdf \
 What happens during the build process is the following:
 
 0. A container is started using a docker image `builder`
-1. `archive.zip` is placed in `/tmp/inputdir`
+1. `archive.zip` is placed in `/tmp/inputdir` in the container
 2. The script `/tmp/build output.pdf` is executed
 3. (The build script together with the input file creates the output file and
     place it at `/tmp/output.pdf`)
@@ -78,6 +78,6 @@ Make sure the image is not using the root account
 ## FYI
 
 - Network is disabled on the container
-- The inputdir is a mounted read only directory.
+- The `/tmp/inputdir` is a mounted read only directory.
 - Having `WORKDIR` set to `/tmp` probably make things easier
 
