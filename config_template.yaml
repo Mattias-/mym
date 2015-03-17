@@ -2,4 +2,4 @@ users:
     - username: admin
       password: secret
       images:
-          - doc
+          - builder

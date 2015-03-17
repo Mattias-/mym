@@ -71,24 +71,24 @@ def requires_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-def docker_build(archivedir, target, image):
+def docker_build(inputdir_local, output, image):
     container = c.create_container(
         image=image,
         volumes=['/tmp/archivedir'],
         network_disabled=True,
-        command='/tmp/build %s' % target
+        command='/tmp/build %s' % output
     )
     try:
-        binds = {archivedir: {'bind': '/tmp/archivedir', 'ro': True}}
+        binds = {inputdir_local: {'bind': '/tmp/archivedir', 'ro': True}}
         c.start(container, binds=binds)
         result = c.wait(container, timeout=CONTAINER_TIMEOUT)
         log = c.logs(container, stdout=True, stderr=True)
         print log
         if result != 0:
             raise BuildException(result, log)
-        tar_target = c.copy(container, '/tmp/%s' % target)
+        tar_target = c.copy(container, '/tmp/%s' % output)
         tar = tarfile.open(fileobj=StringIO(tar_target.read()))
-        return tar.extractfile(target)
+        return tar.extractfile(output)
     finally:
         c.remove_container(container, force=True)
 
@@ -97,31 +97,31 @@ def build_get():
     return app.send_static_file('index.html')
 
 @app.route('/', methods=['POST'])
-@app.route('/<image>/<target>', methods=['POST'])
+@app.route('/<image>/<output>', methods=['POST'])
 @requires_auth
-def build(image=None, target=None):
+def build(image=None, output=None):
     image = request.form.get('image', image)
-    target = request.form.get('target', target)
-    archive = request.files['archive']
+    output = request.form.get('output', output)
+    inputfile = request.files['input']
     if not image:
-        return 'Missing image', 400
-    if not target:
-        return 'Missing target', 400
-    if not archive:
-        return 'Missing archive', 400
+        return 'Missing image name', 400
+    if not output:
+        return 'Missing output file', 400
+    if not inputfile:
+        return 'Missing input file', 400
     if not check_image(request.authorization.username, image):
         return 'Image not allowed', 403
     with mktmpdir() as tempdir:
-        archive.save(join(tempdir, secure_filename(archive.filename)))
+        inputfile.save(join(tempdir, secure_filename(inputfile.filename)))
         try:
-            response = Response(docker_build(tempdir, target, image))
-            cd = 'attachment; filename="%s"' % target
+            response = Response(docker_build(tempdir, output, image))
+            cd = 'attachment; filename="%s"' % output
             response.headers['Content-Disposition'] = cd
             response.mimetype = 'application/octet-stream'
             return response
         except docker.errors.APIError as e:
             if 'could not find the file' in e.explanation.lower():
-                err = 'Could not find file %s' % target
+                err = 'Could not find file %s' % output
                 return err, 400
             else:
                 return e.explanation, 500
