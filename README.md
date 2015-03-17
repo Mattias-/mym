@@ -65,10 +65,13 @@ What happens during the build process is the following:
 ## Configuration
 
 Username, passwords and what docker images they can use are configured in
-`config.yaml`
+`config.yaml`.
+Build timeout is configured in this file as well.
+
 
 The docker images have some prerequisites:
 There must be a script at `/tmp/build`
+
 
 
 ## Be safe

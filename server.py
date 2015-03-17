@@ -72,16 +72,17 @@ def requires_auth(f):
     return decorated
 
 def docker_build(inputdir_local, output, image):
+    inputdir_container = '/tmp/inputdir'
     container = c.create_container(
         image=image,
-        volumes=['/tmp/inputdir'],
+        volumes=[inputdir_container],
         network_disabled=True,
         command='/tmp/build %s' % output
     )
     try:
-        binds = {inputdir_local: {'bind': '/tmp/inputdir', 'ro': True}}
+        binds = {inputdir_local: {'bind': inputdir_container, 'ro': True}}
         c.start(container, binds=binds)
-        result = c.wait(container, timeout=CONTAINER_TIMEOUT)
+        result = c.wait(container, timeout=get_config['container_timeout'])
         log = c.logs(container, stdout=True, stderr=True)
         print log
         if result != 0:
@@ -127,7 +128,7 @@ def build(image=None, output=None):
                 return e.explanation, 500
         except ReadTimeout as e:
             err = ('Timeout: Build did not complete after %d seconds' %
-                   CONTAINER_TIMEOUT)
+                   get_config['container_timeout'])
             return err, 400
         except BuildException as e:
             return str(e), 400
