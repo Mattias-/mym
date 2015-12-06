@@ -1,6 +1,20 @@
+<!DOCTYPE html>
+<title>MYM</title>
+<style>
+  * {
+    font: 1em "Open Sans", sans-serif;
+  }
+  label {
+    display: inline-block;
+    width: 60px;
+    margin-right: 20px;
+    margin-top: 5px;
+    text-align: right;
+  }
+</style>
 <form action="/" method="POST" enctype="multipart/form-data">
-  Target: <input type="text" name="target"><br>
-  Image: <input type="text" name="image"><br>
-  Archive: <input type="file" name="archive"><br>
+  <label for="target">Target:</label><input type="text" name="target" id="target"><br>
+  <label for="image">Image:</label><input type="text" name="image" id="image"><br>
+  <label for="archive">Archive:</label><input type="file" name="archive" id="archive"><br>
   <input type="submit" value="Submit">
 </form>
