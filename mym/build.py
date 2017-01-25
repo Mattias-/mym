@@ -3,16 +3,16 @@ from os.path import join
 
 import docker
 from requests.exceptions import ReadTimeout
-from flask import request, Response
+from flask import current_app, request, Response, Blueprint
 from werkzeug import secure_filename
 
 from .exceptions import BuildException
-from .utils import docker_build, check_auth, check_image, mktmpdir, get_config
-
-from mym import app
+from .utils import docker_build, check_auth, check_image, mktmpdir
 
 
 c = docker.Client(base_url='unix://var/run/docker.sock')
+
+build = Blueprint('build', __name__, static_folder='../static')
 
 
 def requires_auth(f):
@@ -26,15 +26,15 @@ def requires_auth(f):
     return decorated
 
 
-@app.route('/', methods=['GET'])
+@build.route('/', methods=['GET'])
 def index():
-    return app.send_static_file('index.html')
+    return build.send_static_file('index.html')
 
 
-@app.route('/', methods=['POST'])
-@app.route('/<image>/<output>', methods=['POST'])
+@build.route('/', methods=['POST'])
+@build.route('/<image>/<output>', methods=['POST'])
 @requires_auth
-def build(image=None, output=None):
+def run_build(image=None, output=None):
     image = request.form.get('image', image)
     output = request.form.get('output', output)
     inputfile = request.files['input']
@@ -62,7 +62,7 @@ def build(image=None, output=None):
                 return e.explanation, 500
         except ReadTimeout as e:
             err = ('Timeout: Build did not complete after %d seconds' %
-                   get_config()['container_timeout'])
+                   current_app.config['CONTAINER_TIMEOUT'])
             return err, 400
         except BuildException as e:
             return str(e), 400

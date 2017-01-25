@@ -1,33 +1,29 @@
 from contextlib import contextmanager
-from io import StringIO
+from StringIO import StringIO
 from shutil import rmtree
 import tarfile
-from tempfile import mkdtemp
-import yaml
+
+from flask import current_app
 
 from .exceptions import BuildException
+
+import os
+import uuid
 
 
 @contextmanager
 def mktmpdir():
     try:
-        tmpdir = mkdtemp()
+        tmpdir = os.path.join(current_app.config['TMP_DIR'], uuid.uuid4())
+        os.makedirs(tmpdir)
         yield tmpdir
     finally:
         rmtree(tmpdir, ignore_errors=True)
 
 
-def get_config():
-    CONFIG_FILE = 'config.yaml'
-    with open(CONFIG_FILE) as f:
-        config = yaml.safe_load(f)
-        return config
-
-
 def get_user(username):
-    config = get_config()
-    for user in config['users']:
-        if user['username'] == username:
+    for user in current_app.config['USERS']:
+        if user['username'].lower() == username.lower():
             return user
     raise Exception('User not found')
 
@@ -43,7 +39,10 @@ def check_auth(username, password):
 def check_image(username, image):
     try:
         user = get_user(username)
-        return image in user['images']
+        if 'allow_images' in user:
+            return image in user['allow_images']
+        else:
+            return True
     except:
         return False
 
@@ -53,13 +52,14 @@ def docker_build(c, inputdir_local, output, image):
     container = c.create_container(
         image=image,
         volumes=[inputdir_container],
+        host_config=c.create_host_config(binds=[
+            ':'.join([inputdir_local, inputdir_container, 'rw'])]),
         network_disabled=True,
         command='/tmp/build %s' % output
     )
     try:
-        binds = {inputdir_local: {'bind': inputdir_container, 'ro': True}}
-        c.start(container, binds=binds)
-        result = c.wait(container, timeout=get_config['container_timeout'])
+        c.start(container)
+        result = c.wait(container, timeout=current_app.config['CONTAINER_TIMEOUT'])
         log = c.logs(container, stdout=True, stderr=True)
         print log
         if result != 0:
